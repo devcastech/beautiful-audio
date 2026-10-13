@@ -12,14 +12,16 @@ pub struct Metronome {
 
 impl Metronome {
     pub fn new(sample_rate: f32, bpm: f32) -> Self {
+        let beats_per_bar = 4;
+        let volume = 0.5;
         Self {
             sample_rate, // 48000
             bpm,
-            beats_per_bar: 4,
+            beats_per_bar,
             counter: u64::MAX,
-            beat: 0,
+            beat: beats_per_bar - 1,
             click_pos: None,
-            volume: 0.5,
+            volume,
         }
     }
     pub fn process(&mut self, out: &mut [f32]) {
@@ -41,9 +43,10 @@ impl Metronome {
             if pos < duration {
                 self.click_pos = Some(pos + 1);
                 let time = pos as f32 / self.sample_rate;
-                let wave = (2.0 * PI * 1000.0 * time).sin();
-
-                return wave * self.volume;
+                let freq = if self.beat == 0 { 1500.0 } else { 1000.0 };
+                let wave = (2.0 * PI * freq * time).sin();
+                let envelope = 1.0 - pos as f32 / duration as f32;
+                return wave * envelope * self.volume;
                 //return 1.0 * self.volume;
             } else {
                 self.click_pos = None
@@ -67,6 +70,12 @@ impl Metronome {
 
     pub fn with_volume(mut self, volume: f32) -> Self {
         self.volume = volume;
+        self
+    }
+
+    pub fn with_beats_per_bar(mut self, beats_per_bar: u32) -> Self {
+        self.beats_per_bar = beats_per_bar.max(1);
+        self.beat = self.beats_per_bar - 1;
         self
     }
 }
