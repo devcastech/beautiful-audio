@@ -5,9 +5,14 @@ use nice_plug_iced::{
     IcedEditor, IcedEditorState, IcedNiceContext, IcedNiceSettings, PersistentState, application,
     create_iced_editor,
     iced::{
-        Center, PollSubNotifier, Subscription, Theme,
-        widget::{Column, column, slider, text},
+        Center, Element, Fill, PollSubNotifier, Subscription, Theme,
+        widget::{column, container, text},
     },
+};
+
+use iced_audio::{
+    Gesture, Knob,
+    param::{nice_to_iced, set_nice_param},
 };
 
 use crate::MetronomeParams;
@@ -15,8 +20,7 @@ use crate::MetronomeParams;
 #[derive(Debug, Clone, Copy)]
 pub enum Message {
     Poll,
-    BpmChanged(f32),
-    BpmReleased,
+    BpmGesture(Gesture),
 }
 
 pub struct EditorData {
@@ -26,51 +30,39 @@ pub struct EditorData {
 struct Gui {
     data: PersistentState<EditorData>,
     ctx: IcedNiceContext,
-    dragging: bool,
 }
 
 impl Gui {
     fn new(data: PersistentState<EditorData>, ctx: IcedNiceContext) -> Self {
-        Self {
-            data,
-            ctx,
-            dragging: false,
-        }
+        Self { data, ctx }
     }
 
     fn update(&mut self, message: Message) {
         match message {
             Message::Poll => {}
-            Message::BpmChanged(value) => {
+            Message::BpmGesture(gesture) => {
                 let setter = self.ctx.nice_context.param_setter();
-                let bpm = &self.data.params.bpm;
-                if !self.dragging {
-                    setter.begin_set_parameter(bpm);
-                    self.dragging = true;
-                }
-                setter.set_parameter(bpm, value);
-            }
-            Message::BpmReleased => {
-                if self.dragging {
-                    let setter = self.ctx.nice_context.param_setter();
-                    setter.end_set_parameter(&self.data.params.bpm);
-                    self.dragging = false;
-                }
+                set_nice_param(&self.data.params.bpm, gesture, &setter);
             }
         }
     }
 
-    fn view(&self) -> Column<'_, Message> {
+    fn view(&self) -> Element<'_, Message> {
         let bpm = self.data.params.bpm.value();
-        column![
-            text(format!("{bpm:.0}")).size(96),
-            text("BPM").size(24),
-            slider(30.0..=300.0, bpm, Message::BpmChanged)
-                .step(1.0_f32)
-                .on_release(Message::BpmReleased),
-        ]
-        .padding(20)
-        .align_x(Center)
+
+        container(
+            column![
+                text(format!("{bpm:.0}")).size(96),
+                text("BPM").size(24),
+                Knob::new(nice_to_iced(&self.data.params.bpm)).on_gesture(Message::BpmGesture),
+            ]
+            .spacing(10)
+            .align_x(Center),
+        )
+        .padding(10)
+        .center_x(Fill)
+        .center_y(Fill)
+        .into()
     }
 
     fn theme(&self) -> Option<Theme> {
@@ -83,7 +75,7 @@ impl Gui {
 }
 
 pub fn default_state() -> Arc<IcedEditorState> {
-    IcedEditorState::from_size(LogicalSize::new(300.0, 220.0), 1.0)
+    IcedEditorState::from_size(LogicalSize::new(300.0, 300.0), 1.0)
 }
 
 pub fn create(

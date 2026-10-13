@@ -9,4 +9,5 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 audio-core = { path = "../core" }
 nice-plug = { version = "=0.4.2", features = ["standalone"] }
-nice-plug-iced = "=0.4.1"
+nice-plug-iced = { version = "=0.4.1", features = ["canvas"] }
+iced_audio = { version = "=0.17.1", features = ["nice-plug"] }
