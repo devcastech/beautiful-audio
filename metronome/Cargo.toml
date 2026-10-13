@@ -1,0 +1,12 @@
+[package]
+name = "metronome"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+audio-core = { path = "../core" }
+nice-plug = { version = "=0.4.2", features = ["standalone"] }
+nice-plug-iced = "=0.4.1"
