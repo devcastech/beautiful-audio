@@ -1,11 +1,15 @@
 use audio_core::metronome::Metronome;
+use nice_plug::params::range::IntRange;
 use nice_plug::prelude::{
     ActivateContext, AsyncExecutor, AudioIOLayout, AuxiliaryBuffers, Buffer, BufferConfig,
-    FloatParam, FloatRange, Params, Plugin, ProcessContext, ProcessStatus,
+    FloatParam, FloatRange, IntParam, Params, Plugin, ProcessContext, ProcessStatus,
 };
 use nice_plug_iced::{IcedEditor, IcedEditorState, iced::PollSubNotifier};
 use std::num::NonZeroU32;
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU32, Ordering},
+};
 mod editor;
 
 pub struct MetronomePlugin {
@@ -13,12 +17,15 @@ pub struct MetronomePlugin {
     metronome: Metronome,
     editor_state: Arc<IcedEditorState>,
     notifier: PollSubNotifier,
+    current_beat: Arc<AtomicU32>,
 }
 
 #[derive(Params)]
 struct MetronomeParams {
     #[id = "bpm"]
     bpm: FloatParam,
+    #[id = "beats_per_bar"]
+    beats_per_bar: IntParam,
 }
 
 impl Default for MetronomeParams {
@@ -34,6 +41,8 @@ impl Default for MetronomeParams {
             )
             .with_step_size(1.0)
             .with_unit(" BPM"),
+            beats_per_bar: IntParam::new("BEATS_PER_BAR", 4, IntRange::Linear { min: 1, max: 8 })
+                .with_unit(" BEATS PER BAR"),
         }
     }
 }
@@ -45,6 +54,7 @@ impl Default for MetronomePlugin {
             metronome: Metronome::new(48_000.0, 120.0),
             editor_state: editor::default_state(),
             notifier: PollSubNotifier::new(),
+            current_beat: Arc::new(AtomicU32::new(0)),
         }
     }
 }
@@ -89,7 +99,11 @@ impl Plugin for MetronomePlugin {
         let channels = buffer.as_slice();
         let (left, others) = channels.split_first_mut().unwrap();
         self.metronome.bpm = self.params.bpm.value();
+        self.metronome.beats_per_bar = self.params.beats_per_bar.value() as u32;
         self.metronome.process(left);
+        self.current_beat
+            .store(self.metronome.beat(), Ordering::Relaxed);
+        self.notifier.notify();
         for ch in others {
             ch.copy_from_slice(left);
         }
@@ -102,6 +116,7 @@ impl Plugin for MetronomePlugin {
             self.notifier.clone(),
             editor::EditorData {
                 params: self.params.clone(),
+                current_beat: self.current_beat.clone(),
             },
         )
     }

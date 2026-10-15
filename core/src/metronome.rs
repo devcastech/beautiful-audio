@@ -78,6 +78,10 @@ impl Metronome {
         self.beat = self.beats_per_bar - 1;
         self
     }
+
+    pub fn beat(&self) -> u32 {
+        self.beat
+    }
 }
 
 #[cfg(test)]
