@@ -26,6 +26,8 @@ struct MetronomeParams {
     bpm: FloatParam,
     #[id = "beats_per_bar"]
     beats_per_bar: IntParam,
+    #[id = "volume"]
+    volume: FloatParam,
 }
 
 impl Default for MetronomeParams {
@@ -43,6 +45,7 @@ impl Default for MetronomeParams {
             .with_unit(" BPM"),
             beats_per_bar: IntParam::new("BEATS_PER_BAR", 4, IntRange::Linear { min: 1, max: 8 })
                 .with_unit(" BEATS PER BAR"),
+            volume: FloatParam::new("Volume", 0.5, FloatRange::Linear { min: 0.0, max: 1.0 }),
         }
     }
 }
@@ -100,6 +103,7 @@ impl Plugin for MetronomePlugin {
         let (left, others) = channels.split_first_mut().unwrap();
         self.metronome.bpm = self.params.bpm.value();
         self.metronome.beats_per_bar = self.params.beats_per_bar.value() as u32;
+        self.metronome.volume = self.params.volume.value();
         self.metronome.process(left);
         self.current_beat
             .store(self.metronome.beat(), Ordering::Relaxed);

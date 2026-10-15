@@ -7,7 +7,7 @@ pub struct Metronome {
     counter: u64, // muestras desde el último beat
     beat: u32,
     click_pos: Option<usize>,
-    volume: f32,
+    pub volume: f32,
 }
 
 impl Metronome {

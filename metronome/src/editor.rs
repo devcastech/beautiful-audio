@@ -23,6 +23,8 @@ use iced_audio::{
     style::knob as knob_style,
 };
 
+use nice_plug::prelude::FloatParam;
+
 use crate::MetronomeParams;
 
 struct BeatIndicator {
@@ -116,6 +118,7 @@ impl canvas::Program<Message> for Screws {
 pub enum Message {
     Poll,
     BpmGesture(Gesture),
+    VolumeGesture(Gesture),
     BeatsDown,
     BeatsUp,
 }
@@ -145,6 +148,10 @@ impl Gui {
                 let setter = self.ctx.nice_context.param_setter();
                 set_nice_param(&self.data.params.bpm, gesture, &setter);
             }
+            Message::VolumeGesture(gesture) => {
+                let setter = self.ctx.nice_context.param_setter();
+                set_nice_param(&self.data.params.volume, gesture, &setter);
+            }
             Message::BeatsDown => {
                 let setter = self.ctx.nice_context.param_setter();
                 let beats = &self.data.params.beats_per_bar;
@@ -168,7 +175,6 @@ impl Gui {
 
         let tempo = container(
             column![
-                text("TEMPO").size(11).style(screen_label),
                 row![
                     text(format!("{bpm:.0}")).size(48),
                     text("BPM").size(12).style(screen_label)
@@ -186,14 +192,11 @@ impl Gui {
         //.style(panel);
 
         let bpm_knob = container(
-            column![
-                Knob::new(nice_to_iced(&self.data.params.bpm))
-                    .on_gesture(Message::BpmGesture)
-                    .style(KnobStyle)
-                    .size(Length::Fixed(56.0)),
+            row![
+                labeled_knob(&self.data.params.bpm, "TEMPO", Message::BpmGesture),
+                labeled_knob(&self.data.params.volume, "VOLUMEN", Message::VolumeGesture),
             ]
-            .spacing(8)
-            .align_x(Center),
+            .spacing(32),
         )
         .padding(12)
         .width(Fill)
@@ -325,6 +328,24 @@ fn screen_label(theme: &Theme) -> text::Style {
                 .scale_alpha(0.75),
         ),
     }
+}
+
+// perilla con su etiqueta debajo, como la serigrafía de un equipo físico
+fn labeled_knob<'a>(
+    param: &FloatParam,
+    label: &'a str,
+    on_gesture: fn(Gesture) -> Message,
+) -> Element<'a, Message> {
+    column![
+        Knob::new(nice_to_iced(param))
+            .on_gesture(on_gesture)
+            .style(KnobStyle)
+            .size(Length::Fixed(56.0)),
+        text(label).size(11).style(screen_label),
+    ]
+    .spacing(8)
+    .align_x(Center)
+    .into()
 }
 
 pub fn default_state() -> Arc<IcedEditorState> {
