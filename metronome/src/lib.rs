@@ -1,8 +1,8 @@
 use audio_core::metronome::Metronome;
 use nice_plug::params::range::IntRange;
 use nice_plug::prelude::{
-    ActivateContext, AsyncExecutor, AudioIOLayout, AuxiliaryBuffers, Buffer, BufferConfig,
-    FloatParam, FloatRange, IntParam, Params, Plugin, ProcessContext, ProcessStatus,
+    ActivateContext, AsyncExecutor, AudioIOLayout, AuxiliaryBuffers, BoolParam, Buffer,
+    BufferConfig, FloatParam, FloatRange, IntParam, Params, Plugin, ProcessContext, ProcessStatus,
 };
 use nice_plug_iced::{IcedEditor, IcedEditorState, iced::PollSubNotifier};
 use std::num::NonZeroU32;
@@ -28,6 +28,8 @@ struct MetronomeParams {
     beats_per_bar: IntParam,
     #[id = "volume"]
     volume: FloatParam,
+    #[id = "is_playing"]
+    is_playing: BoolParam,
 }
 
 impl Default for MetronomeParams {
@@ -46,6 +48,7 @@ impl Default for MetronomeParams {
             beats_per_bar: IntParam::new("BEATS_PER_BAR", 4, IntRange::Linear { min: 1, max: 8 })
                 .with_unit(" BEATS PER BAR"),
             volume: FloatParam::new("Volume", 0.5, FloatRange::Linear { min: 0.0, max: 1.0 }),
+            is_playing: BoolParam::new("Playing", true),
         }
     }
 }
@@ -104,6 +107,12 @@ impl Plugin for MetronomePlugin {
         self.metronome.bpm = self.params.bpm.value();
         self.metronome.beats_per_bar = self.params.beats_per_bar.value() as u32;
         self.metronome.volume = self.params.volume.value();
+        if self.params.is_playing.value() {
+            self.metronome.play()
+        } else {
+            self.metronome.stop()
+        }
+
         self.metronome.process(left);
         self.current_beat
             .store(self.metronome.beat(), Ordering::Relaxed);
