@@ -31,7 +31,6 @@ impl Metronome {
             for s in out.iter_mut() {
                 *s = 0.0
             }
-            // out.fill(0.0)
             return;
         }
         let period = (self.sample_rate * 60.0 / self.bpm) as u64;
@@ -166,7 +165,7 @@ mod tests {
     #[test]
     fn stopped_outputs_silence() {
         let mut m = Metronome::new(48_000.0, 60.0);
-        let mut buf = vec![0.0; 48_000 * 1];
+        let mut buf = vec![0.0; 48_000];
 
         m.process(&mut buf);
         m.stop();
@@ -178,16 +177,16 @@ mod tests {
     #[test]
     fn can_restart_after_play() {
         let mut m = Metronome::new(48_000.0, 120.0);
-        let mut buf = vec![0.0; 30_000 * 1];
+        let mut buf = vec![0.0; 30_000];
         m.process(&mut buf);
         m.stop();
         m.play();
-        let mut buf2 = vec![0.0; 48_000 * 1];
+        let mut buf2 = vec![0.0; 48_000];
         m.process(&mut buf2);
         let starts = start_clicks(&buf2);
         assert!(starts.len() >= 2, "expected at least 2 clicks");
         assert!(starts[0] < 10);
-        assert_eq!(m.beat(), 1, "exptected beat == 2")
+        assert_eq!(m.beat(), 1, "expected beat == 1");
     }
 
     #[test]
@@ -195,7 +194,6 @@ mod tests {
         let mut m = Metronome::new(48_000.0, 120.0);
         let mut buf = vec![0.0; 48_000 * 3];
 
-        // como el plugin: play() antes de cada bloque
         for chunk in buf.chunks_mut(512) {
             m.play();
             m.process(chunk);
@@ -206,7 +204,6 @@ mod tests {
         for pairs in starts.windows(2) {
             assert_eq!(pairs[1] - pairs[0], 24_000);
         }
-        // 6 clicks: 0, 1, 2, 3, 0, 1
         assert_eq!(m.beat(), 1);
     }
 }
