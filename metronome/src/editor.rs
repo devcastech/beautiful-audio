@@ -8,10 +8,10 @@ use nice_plug_iced::{
     IcedEditor, IcedEditorState, IcedNiceContext, IcedNiceSettings, PersistentState, application,
     create_iced_editor,
     iced::{
-        Border, Center, Color, Degrees, Element, Fill, Length, Padding, Point, PollSubNotifier,
-        Rectangle, Renderer, Size, Subscription, Theme,
-        alignment::Vertical,
-        gradient, mouse,
+        Border, Center, Color, Degrees, Element, Fill, Font, Length, Padding, Point,
+        PollSubNotifier, Rectangle, Renderer, Size, Subscription, Theme,
+        alignment::{Horizontal, Vertical},
+        font, gradient, mouse,
         theme::Palette,
         widget::{button, canvas, column, container, row, stack, text},
     },
@@ -27,7 +27,6 @@ use nice_plug::prelude::FloatParam;
 
 use crate::MetronomeParams;
 
-// colores del equipo: gris carbón neutro y rojo solo para lo que está encendido
 const SOCKET: Color = Color::from_rgb8(0x1c, 0x1c, 0x1c);
 const HALO: Color = Color::from_rgb8(0x22, 0x22, 0x22);
 const HALO_WIDTH: f32 = 2.0;
@@ -38,7 +37,10 @@ const KEY: Color = Color::from_rgb8(0x26, 0x26, 0x26);
 const KEY_HOVER_TOP: Color = Color::from_rgb8(0x31, 0x31, 0x31);
 const KEY_HOVER: Color = Color::from_rgb8(0x2a, 0x2a, 0x2a);
 const KEY_SUNK: Color = Color::from_rgb8(0x21, 0x21, 0x21);
-// LED apagado: apenas más oscuro que el panel, para que el encendido destaque
+const LOGO: Color = Color::from_rgb8(0x33, 0x33, 0x33);
+const SCREW: Color = Color::from_rgb8(0x35, 0x35, 0x35);
+const SCREW_SLOT: Color = Color::from_rgb8(0x22, 0x22, 0x22);
+const BRAND_BAND: f32 = 36.0;
 const LED_OFF: Color = Color::from_rgb8(0x1c, 0x1c, 0x1c);
 
 struct BeatIndicator {
@@ -89,11 +91,10 @@ impl canvas::Program<Message> for Screws {
         &self,
         _state: &(),
         renderer: &Renderer,
-        theme: &Theme,
+        _theme: &Theme,
         bounds: Rectangle,
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
-        let palette = theme.extended_palette();
         let mut frame = canvas::Frame::new(renderer, bounds.size());
 
         let margin = 10.0;
@@ -107,10 +108,7 @@ impl canvas::Program<Message> for Screws {
 
         for center in corners {
             // cabeza del tornillo
-            frame.fill(
-                &canvas::Path::circle(center, radius),
-                palette.background.strong.color.scale_alpha(0.6),
-            );
+            frame.fill(&canvas::Path::circle(center, radius), SCREW);
             // ranura en diagonal, de borde a borde de la cabeza
             let offset = radius * 0.7;
             let slot = canvas::Path::line(
@@ -121,7 +119,7 @@ impl canvas::Program<Message> for Screws {
                 &slot,
                 canvas::Stroke::default()
                     .with_width(1.5)
-                    .with_color(palette.background.base.color),
+                    .with_color(SCREW_SLOT),
             );
         }
 
@@ -242,7 +240,10 @@ impl Gui {
         let tempo = container(
             column![
                 row![
-                    text(format!("{bpm:.0}")).size(56).style(display),
+                    text(format!("{bpm:.0}"))
+                        .size(56)
+                        .line_height(1.0)
+                        .style(display),
                     text("BPM").size(14).style(label)
                 ]
                 .align_y(Vertical::Center)
@@ -251,7 +252,7 @@ impl Gui {
             .spacing(8)
             .align_x(Center),
         )
-        .padding(12)
+        .padding([0, 12])
         .width(Fill)
         .center_x(Fill);
 
@@ -269,7 +270,7 @@ impl Gui {
             .align_y(Vertical::Center)
             .spacing(20),
         )
-        .padding(12)
+        .padding([0, 12])
         .width(Fill)
         .center_x(Fill);
 
@@ -293,16 +294,24 @@ impl Gui {
             .spacing(8)
             .align_x(Center),
         )
-        .padding(12)
+        .padding([0, 12])
         .width(Fill);
         //.style(panel);
 
+        let brand = container(logo()).center_x(Fill).padding(Padding {
+            top: 10.0,
+            ..Padding::ZERO
+        });
+
         let content = container(column![tempo, bpm_knob, bar].spacing(12))
-            .padding(12)
+            .padding(Padding {
+                top: BRAND_BAND,
+                ..Padding::new(12.0)
+            })
             .center_x(Fill)
             .center_y(Fill);
         //.into();
-        stack![canvas(Screws).width(Fill).height(Fill), content,].into()
+        stack![canvas(Screws).width(Fill).height(Fill), brand, content,].into()
     }
 
     fn theme(&self) -> Option<Theme> {
@@ -385,8 +394,39 @@ fn labeled_knob<'a>(
     .into()
 }
 
+fn logo<'a>() -> Element<'a, Message> {
+    let serif = Font {
+        family: font::Family::Serif,
+        weight: font::Weight::Bold,
+        ..Font::DEFAULT
+    };
+    let (big, small) = (22.0, 8.0);
+    let word = |word, size| {
+        text(word)
+            .size(size)
+            .line_height(1.0)
+            .font(serif)
+            .color(LOGO)
+    };
+
+    let baseline = (big - small) * 0.15;
+
+    row![
+        column![word("Labs", small), word("Audio", small)]
+            .align_x(Horizontal::Right)
+            .padding(Padding {
+                bottom: baseline,
+                ..Padding::ZERO
+            }),
+        word("BE", big),
+    ]
+    .spacing(2)
+    .align_y(Vertical::Bottom)
+    .into()
+}
+
 pub fn default_state() -> Arc<IcedEditorState> {
-    IcedEditorState::from_size(LogicalSize::new(300.0, 380.0), 1.0)
+    IcedEditorState::from_size(LogicalSize::new(300.0, 320.0), 1.0)
 }
 
 pub fn create(
@@ -415,8 +455,6 @@ fn key<'a>(
     latched: bool,
 ) -> Element<'a, Message> {
     let ring = well_ring(size);
-    // sombra dura de la tecla: una base oscura que asoma por debajo. enganchada,
-    // la tecla baja y la base asoma por arriba, como el canto de un hueco
     let drop = (size / 16.0).max(2.0).round();
     let (above, below) = if latched { (drop, 0.0) } else { (0.0, drop) };
 
@@ -466,8 +504,6 @@ fn well_ring(size: f32) -> f32 {
     (size / 12.0).max(3.0)
 }
 
-// capa redondeada que arriba tiene `color` y hacia abajo se funde con el panel,
-// como la sombra de una luz que viene de arriba
 fn fading(theme: &Theme, color: Color, radius: f32) -> container::Style {
     let panel = theme.extended_palette().background.base.color;
     let background = gradient::Linear::new(Degrees(180.0))
@@ -483,8 +519,6 @@ fn fading(theme: &Theme, color: Color, radius: f32) -> container::Style {
     }
 }
 
-// tecla con un degradado leve (más clara arriba) que la hace ver abombada;
-// enganchada o pulsada queda plana y más oscura, como si se hundiera
 fn key_style(theme: &Theme, status: button::Status, size: f32, latched: bool) -> button::Style {
     let palette = theme.extended_palette();
     let sunk = latched || status == button::Status::Pressed;
