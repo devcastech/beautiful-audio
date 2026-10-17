@@ -4,7 +4,7 @@ pub struct Metronome {
     sample_rate: f32,
     pub bpm: f32,
     pub beats_per_bar: u32,
-    counter: u64, // muestras desde el último beat
+    counter: u64,
     beat: u32,
     click_pos: Option<usize>,
     pub volume: f32,
@@ -33,7 +33,6 @@ impl Metronome {
                 self.click_pos = Some(0);
             }
             *s = self.next_click_sample();
-            // seno corto con envolvente; más agudo si beat == 0
             self.counter += 1;
         }
     }
@@ -47,26 +46,12 @@ impl Metronome {
                 let wave = (2.0 * PI * freq * time).sin();
                 let envelope = 1.0 - pos as f32 / duration as f32;
                 return wave * envelope * self.volume;
-                //return 1.0 * self.volume;
             } else {
                 self.click_pos = None
             }
         }
         0.0
     }
-
-    //fn next_click_sample(&mut self) -> f32 {
-    //    let duration = (self.sample_rate * 0.020) as usize;
-    //    if let Some(pos) = self.click_pos {
-    //        if pos < duration {
-    //            self.click_pos = Some(pos + 1);
-    //            return 1.0 * self.volume;
-    //        } else {
-    //            self.click_pos = None
-    //        }
-    //    }
-    //    0.0
-    //}
 
     pub fn with_volume(mut self, volume: f32) -> Self {
         self.volume = volume;
